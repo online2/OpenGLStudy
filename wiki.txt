@@ -1,0 +1,125 @@
+OpenGL中着色器shader就相当于画笔，而顶点vertices相当于图形
+着色器：
+    着色器OpenGL中分成两个部分，
+        一个用于绘制顶点的顶点着色器VerticesShader
+        一个用于给顶点连线后所包围的区域填充颜色的片元着色器FragmentShader
+
+        /**
+          * attribute、uniform、varying都是在OpenGL的着色器语言中表示限定符
+          *     attribute一般用于每个顶点都各不相同的量。 GLES20.glGetAttribLocation(mProgram, "vPosition");去获取句柄
+          *     uniform一般用于对同一组顶点组成的3D物体中各个顶点都相同的量。 GLES20.glGetUniformLocation(mProgram, "uColor");
+          *     varying一般用于从顶点着色器传入到片元着色器的量。varying变量是vertex和fragment shader之间做数据传递用的
+          */
+          着色器脚本语音，基于GLSL语言
+
+一、OpenGL 绘制图形基本步骤
+    1. 设置OpenGL版本(一定要设置)
+               mGlSurfaceView.setEGLContextClientVersion(2);
+    2.设置渲染器(后面会着重讲这个渲染器的类)
+              mGlSurfaceView.setRenderer(new MyShader());
+        渲染器步骤：
+            2.1 实现  GLSurfaceView.Renderer类
+            2.2 根据着色脚本，初始化拿到 顶点着色器，片元着色器 shader索引值
+            2.3 根据shader索引值创建 OpenGLES程序 mProgram
+            2.4 根据 shader + mProgram 拿到顶点着色器，片元着色器 句柄
+            2.5 在 onDrawFrame 中绘制，要调用GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT); 做清屏操作
+            2.5 使用mProgram程序，设置顶点数据，设置颜色数据，绘制GLES20.glDrawArrays()
+
+                    GLES20.glDrawArrays的第一个参数表示绘制方式，第二个参数表示偏移量，第三个参数表示顶点个数。
+                        绘制方式有：
+                            int GL_POINTS       //将传入的顶点坐标作为单独的点绘制
+                            int GL_LINES        //将传入的坐标作为单独线条绘制，ABCDEFG六个顶点，绘制AB、CD、EF三条线
+                            int GL_LINE_STRIP   //将传入的顶点作为折线绘制，ABCD四个顶点，绘制AB、BC、CD三条线
+                            int GL_LINE_LOOP    //将传入的顶点作为闭合折线绘制，ABCD四个顶点，绘制AB、BC、CD、DA四条线。
+                            int GL_TRIANGLES    //将传入的顶点作为单独的三角形绘制，ABCDEF绘制ABC,DEF两个三角形
+                            int GL_TRIANGLE_FAN    //将传入的顶点作为扇面绘制，ABCDEF绘制ABC、ACD、ADE、AEF四个三角形
+                            int GL_TRIANGLE_STRIP   //将传入的顶点作为三角条带绘制，ABCDEF绘制ABC,BCD,CDE,DEF四个三角形
+                      绘制方法有两种：
+                      GLES20.glDrawArrays，也就是顶点法，
+                      GLES20.glDrawElements，称之为索引法
+                        顶点法拥有的绘制方式，索引法也都有。相对于顶点法在复杂图形的绘制中无法避免大量顶点重复的情况，索引法可以相对顶点法减少很多重复顶点占用的空间
+    3.设置渲染模式为连续模式(会以60fps的速度刷新)
+              mGlSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
+OpenGL相机
+     相机对应于OpenGL的世界，决定相机拍摄的结果（也就是最后屏幕上展示的结果），包括相机位置、相机观察方向以及相机的UP方向。
+        相机位置：相机的位置是比较好理解的，就是相机在3D空间里面的坐标点。
+        相机观察方向：相机的观察方向，表示的是相机镜头的朝向，你可以朝前拍、朝后拍、也可以朝左朝右，或者其他的方向。
+        相机UP方向：相机的UP方向，可以理解为相机顶端指向的方向。比如你把相机斜着拿着，拍出来的照片就是斜着的，你倒着拿着，拍出来的就是倒着的。
+            设置相机设置：
+
+            Matrix.setLookAtM (float[] rm,      //接收相机变换矩阵
+                            int rmOffset,       //变换矩阵的起始位置（偏移量）
+                            float eyeX,float eyeY, float eyeZ,   //相机位置
+                            float centerX,float centerY,float centerZ,  //观测点位置
+                            float upX,float upY,float upZ)  //up向量在xyz上的分量
+
+
+OpenGL中的投影
+    正交投影：物体呈现出来的大小不会随着其距离视点的远近而发生变化
+        设置正交投影
+            Matrix.orthoM (float[] m,           //接收正交投影的变换矩阵
+                            int mOffset,        //变换矩阵的起始位置（偏移量）
+                            float left,         //相对观察点近面的左边距
+                            float right,        //相对观察点近面的右边距
+                            float bottom,       //相对观察点近面的下边距
+                            float top,          //相对观察点近面的上边距
+                            float near,         //相对观察点近面距离
+                            float far)          //相对观察点远面距离
+
+    透视投影：物体离视点越远，呈现出来的越小。离视点越近，呈现出来的越大
+        设置透视投影
+            Matrix.frustumM (float[] m,         //接收透视投影的变换矩阵
+                            int mOffset,        //变换矩阵的起始位置（偏移量）
+                            float left,         //相对观察点近面的左边距
+                            float right,        //相对观察点近面的右边距
+                            float bottom,       //相对观察点近面的下边距
+                            float top,          //相对观察点近面的上边距
+                            float near,         //相对观察点近面距离
+                            float far)          //相对观察点远面距离
+
+
+变换矩阵
+    实际上相机设置和投影设置并不是真正的设置，而是通过设置参数，得到一个使用相机后顶点坐标的变换矩阵，和投影下的顶点坐标变换矩阵，
+    我们还需要把矩阵传入给顶点着色器，在顶点着色器中用传入的矩阵乘以坐标的向量，得到实际展示的坐标向量。(注意，是矩阵乘以坐标向量，不是坐标向量乘以矩阵，矩阵乘法是不满足交换律的)
+    而通过上面的相机设置和投影设置，我们得到的是两个矩阵，为了方便，我们需要将相机矩阵和投影矩阵相乘，得到一个实际的变换矩阵，再传给顶点着色器。
+
+        矩阵相乘：
+        Matrix.multiplyMM (float[] result, //接收相乘结果
+                        int resultOffset,  //接收矩阵的起始位置（偏移量）
+                        float[] lhs,       //左矩阵
+                        int lhsOffset,     //左矩阵的起始位置（偏移量）
+                        float[] rhs,       //右矩阵
+                        int rhsOffset)     //右矩阵的起始位置（偏移量）
+
+
+
+深度测试
+    开启深度测试：glEnable(GL_DEPTH_TEST)
+    关闭深度测试：glDisable(GL_DEPTH_TEST)
+    其他的一些操作：
+        /开启灯照效果
+             gl.glEnable(GL10.GL_LIGHTING);
+        // 启用光源0
+             gl.glEnable(GL10.GL_LIGHT0);
+        // 启用颜色追踪
+             gl.glEnable(GL10.GL_COLOR_MATERIAL);
+
+    （1）什么是深度？
+        深度其实就是该象素点在3d世界中距离摄象机的距离（绘制坐标），深度缓存中存储着每个象素点（绘制在屏幕上的）的深度值！
+        深度值（Z值）越大，则离摄像机越远。
+        深度值是存贮在深度缓存里面的，我们用深度缓存的位数来衡量深度缓存的精度。
+        深度缓存位数越高，则精确度越高，目前的显卡一般都可支持16位的Z Buffer，一些高级的显卡已经可以支持32位的Z Buffer，但一般用24位Z Buffer就已经足够了。
+    （2）为什么需要深度？
+        在不使用深度测试的时候，如果我们先绘制一个距离较近的物体，再绘制距离较远的物体，则距离远的物体因为后绘制，会把距离近的物体覆盖掉，这样的效果并不是我们所希望的。
+        而有了深度缓冲以后，绘制物体的顺序就不那么重要了，都能按照远近（Z值）正常显示，这很关键。
+        实际上，只要存在深度缓冲区，无论是否启用深度测试，OpenGL在像素被绘制时都会尝试将深度数据写入到缓冲区内，除非调用了glDepthMask(GL_FALSE)来禁止写入。
+        这些深度数据除了用于常规的测试外，还可以有一些有趣的用途，比如绘制阴影等等。
+    （3）启用深度测试
+        使用 glEnable(GL_DEPTH_TEST);
+        在默认情况是将需要绘制的新像素的z值与深度缓冲区中对应位置的z值进行比较，如果比深度缓存中的值小，那么用新像素的颜色值更新帧缓存中对应像素的颜色值。
+        但是可以使用glDepthFunc(func)来对这种默认测试方式进行修改。
+        其中参数func的值可以为GL_NEVER（没有处理）、GL_ALWAYS（处理所有）、GL_LESS（小于）、GL_LEQUAL（小于等于）、GL_EQUAL（等于）、GL_GEQUAL（大于等于）、GL_GREATER（大于）或GL_NOTEQUAL（不等于），其中默认值是GL_LESS。
+        一般来将，使用glDepthFunc(GL_LEQUAL);来表达一般物体之间的遮挡关系。
+    （4）启用了深度测试，那么这就不适用于同时绘制不透明物体。
+

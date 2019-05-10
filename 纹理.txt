@@ -1,0 +1,12 @@
+纹理坐标用浮点数来表示，
+    范围一般从0.0到1.0，左上角坐标为（0.0，0.0），右上角坐标为（1.0，0.0），左下角坐标为（0.0，1.0），右下角坐标为（1.0，1.0）
+
+
+纹理采样函数
+    texture2D、texture2DProj、texture2DLod、texture2DProjLod、textureCube、textureCubeLod及
+    texture3D、texture3DProj、texture3DLod、texture3DProjLod等。
+
+    texture表示纹理采样，2D表示对2D纹理采样，3D表示对3D纹理采样
+    Lod后缀，只适用于顶点着色器采样
+    Proj表示纹理坐标st会除以q
+    纹理采样函数中，3D在OpenGLES2.0并不是绝对支持。我们再次暂时不管3D纹理采样函数。重点只对texture2D函数进行说明。texture2D拥有三个参数，第一个参数表示纹理采样器。第二个参数表示纹理坐标，可以是二维、三维、或者四维。第三个参数加入后只能在片元着色器中调用，且只对采样器为mipmap类型纹理时有效。
